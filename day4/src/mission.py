@@ -8,14 +8,15 @@ The ONLY async code in this file is GIVEN below, fully commented —
 you do not write any async today. (New to async? The 60-second
 explainer at the top of src/check_auth.py covers everything used here.)
 
-Your TODOs are all synchronous and small:
-  1. import build pieces from your shell_agent (llm, SYSTEM_PROMPT,
-     make_backend)
-  2. under __main__: backend, cleanup = make_backend()
-  3. agent = create_deep_agent(model=..., system_prompt=...,
-                               tools=[fetch_internal_report],   # <- the given one
-                               backend=backend)
-  4. invoke MISSION, print the last message, cleanup in finally.
+Each piece contributes one thing, and none of them can be faked:
+
+    MCP        ->  information   (behind auth: no token, no data)
+    shell      ->  computation   (analyze.py is written and run BY the agent)
+    LangSmith  ->  visibility    (every step, readable after the fact)
+
+Run:
+    terminal 1:  uv run python src/secure_mcp.py
+    terminal 2:  uv run python src/mission.py
 """
 
 import asyncio
@@ -25,6 +26,15 @@ import os
 from dotenv import load_dotenv
 from fastmcp import Client
 from fastmcp.client.auth import BearerAuth
+
+from deepagents import create_deep_agent
+
+# Everything about HOW the agent is built was decided in 00 — reuse it
+# rather than re-deciding it here. If your names differ, fix the import.
+try:
+    from .shell_agent import SYSTEM_PROMPT, llm, make_backend
+except ImportError:  # pragma: no cover — running as a loose script
+    from shell_agent import SYSTEM_PROMPT, llm, make_backend
 
 load_dotenv()
 
@@ -73,12 +83,25 @@ MISSION = (
 
 
 if __name__ == "__main__":
-    # TODO (all sync, ~8 lines):
-    #   backend, cleanup = make_backend()
-    #   try:
-    #       agent = create_deep_agent(... tools=[fetch_internal_report] ...)
-    #       result = agent.invoke({"messages": [{"role": "user", "content": MISSION}]})
-    #       print(result["messages"][-1].content)
-    #   finally:
-    #       cleanup()
-    pass
+    backend, cleanup = make_backend()
+    try:
+        # Three pieces, one agent, and none of them can fake the others:
+        #   tools=[fetch_internal_report]  -> INFORMATION, behind auth
+        #   backend=<shell>                -> COMPUTATION, really executed
+        #   LangSmith env vars             -> VISIBILITY, zero code here
+        agent = create_deep_agent(
+            model=llm,
+            system_prompt=SYSTEM_PROMPT,
+            tools=[fetch_internal_report],
+            backend=backend,
+        )
+        result = agent.invoke({"messages": [{"role": "user", "content": MISSION}]})
+        print(result["messages"][-1].content)
+    finally:
+        cleanup()
+
+    # Now open the trace and read it in order: the fetch_internal_report
+    # call -> write_file(analyze.py) -> execute -> the printed numbers.
+    # If the numbers in the answer above differ from what the trace shows
+    # analyze.py printing, the model summarized instead of computing —
+    # and the trace is how you caught it.

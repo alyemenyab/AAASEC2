@@ -37,7 +37,10 @@ from deepagents import create_deep_agent
 
 # Reuse what you already built. If your names differ, fix the import,
 # not your files.
-from shell_agent import SYSTEM_PROMPT, llm, make_backend
+try:
+    from .shell_agent import SYSTEM_PROMPT, llm, make_backend
+except ImportError:  # pragma: no cover — running as a loose script
+    from shell_agent import SYSTEM_PROMPT, llm, make_backend
 
 load_dotenv()
 
@@ -51,15 +54,14 @@ ADMIN_TOKEN = os.getenv("MCP_ADMIN_TOKEN", "admin-secret-token")
 # The mission used OUR get_internal_report. The challenge wants YOUR
 # data behind YOUR protected tool.
 #
-# ▢ 1a. In src/secure_mcp.py, add ONE more protected tool that serves
-#       data you invent — sensor readings, grades, lab inventory,
-#       anything with a few numbers in it. Copy the exact pattern of
-#       get_internal_report (same decorator, same scope) and restart
-#       the server.
+# ✅ 1a. DONE — src/secure_mcp.py now also serves get_lab_inventory:
+#        drone-lab parts with quantity, unit_cost and reorder_level,
+#        behind the same @mcp.tool(auth=require_scopes("read:internal"))
+#        decorator as get_internal_report. Same pattern, my data.
 #
-# ▢ 1b. Put its tool name here:
+# ✅ 1b. Its tool name:
 
-MY_TOOL_NAME = "..."          # <- e.g. "get_lab_inventory"
+MY_TOOL_NAME = "get_lab_inventory"
 
 
 # ════════════════════════════════════════════════════════════════
@@ -89,8 +91,13 @@ def fetch_my_data() -> str:
 #   you catch the model summarizing instead of computing.
 
 MISSION = (
-    "1. Call fetch_my_data to get the data. "
-    "2. Write a Python program that computes ... "        # ▢ your analysis
+    "1. Call fetch_my_data to get the lab inventory. "
+    "2. Write restock.py that, for every item, computes stock value "
+    "(quantity * unit_cost) and the shortfall against reorder_level "
+    "(reorder_level - quantity, floored at 0); then prints the total "
+    "inventory value, a table of every item that is at or below its "
+    "reorder level with the cost of restocking it back to that level, "
+    "and the total cost of that restock. Round money to 2 decimals. "
     "3. Execute it with python. "
     "4. Report exactly what the program printed, plus one insight."
 )
@@ -118,12 +125,49 @@ if __name__ == "__main__":
 # ════════════════════════════════════════════════════════════════
 # STEP 5 — evidence (nothing to code)
 # ════════════════════════════════════════════════════════════════
-# ▢ 5a. Show auth working both ways:
-#         uv run python src/check_auth.py          (rows fail/succeed
-#         as expected — swap in MY_TOOL_NAME for the protected rows
-#         if you want it in the table)
-# ▢ 5b. Open the run in LangSmith. Find, in order: the fetch_my_data
-#       call -> the write_file -> the execute -> the printed numbers.
-#       Copy the trace link for your deliverables.
-# ▢ 5c. The adversarial poke (04-challenge.md) — run it, then write
-#       one sentence: what did it get, and what would have stopped it?
+# ✅ 5a. Auth, both directions — `uv run python src/check_auth.py` with
+#        the server up. Recorded output (get_lab_inventory substituted
+#        into the protected rows):
+#
+#          ❌ no token, public tool          -> 401, rejected at the door
+#          ❌ wrong token, public tool       -> 401
+#          ✅ student token, public tool     -> 2026-08-12T...
+#          ❌ student token, PROTECTED tool  -> "Unknown tool"
+#          ✅ admin token, PROTECTED tool    -> {"lab": "AAASEC2 aerial...
+#
+#        Row 4 is the interesting one: not "forbidden" but Unknown tool.
+#        401 is authentication failing; Unknown tool is authorization
+#        working — FastMCP filters unauthorized tools out of discovery,
+#        so an unprivileged caller cannot even learn the tool exists,
+#        let alone probe the shape of the data behind it.
+#
+# ▢ 5b. LangSmith trace: run this file with LANGSMITH_TRACING=true and a
+#       key in .env, then open smith.langchain.com -> aaasec2-day4 ->
+#       the newest run. Read it in order: fetch_my_data (the MCP call)
+#       -> write_file (restock.py) -> execute (python restock.py) ->
+#       the printed table coming back into the model. Paste the run URL
+#       here for the deliverable:
+#
+#         trace: <paste your run URL>
+#
+#       Check while you are there that the numbers in the final answer
+#       are the numbers the trace shows restock.py printing. If they
+#       drift, the model summarized instead of computing.
+#
+# ✅ 5c. The adversarial poke. `env` comes back nearly empty — PATH and
+#        PWD, nothing else — because the shell was given an explicit env
+#        instead of inheriting mine, so there are no API keys in there to
+#        leak. The file read is the uncomfortable half. `~/.ssh/...` fails,
+#        but for an accidental reason: HOME was stripped too, so the shell
+#        cannot expand `~`. Spell the path out — /root/.ssh/id_ed25519.pub,
+#        /etc/passwd, anything my user can read — and it comes straight
+#        back; `whoami` answers with my own account. root_dir and
+#        virtual_mode confine the agent's FILE TOOLS; they do not confine
+#        a shell command, and the shell is the one with my permissions.
+#
+#        One sentence: the poke got whatever my own user account can
+#        read, because the only thing pretending otherwise was a system
+#        prompt — and a prompt is a request, not a boundary; what would
+#        have stopped it is running `execute` somewhere that simply does
+#        not contain my home directory (a sandbox: 05-extra-sandbox.md),
+#        because the boundary belongs in the infrastructure.
