@@ -1,0 +1,58 @@
+==============================================================
+GRAPH (paste into https://mermaid.live) — a STAR, not a chain:
+==============================================================
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	supervisor(supervisor)
+	researcher(researcher)
+	analyst(analyst)
+	writer(writer)
+	critic(critic)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> supervisor;
+	analyst --> supervisor;
+	critic --> supervisor;
+	researcher --> supervisor;
+	supervisor -. &nbsp;FINISH&nbsp; .-> __end__;
+	supervisor -.-> analyst;
+	supervisor -.-> critic;
+	supervisor -.-> researcher;
+	supervisor -.-> writer;
+	writer --> supervisor;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc
+
+
+==============================================================
+RUN (USE_FAKE=True, MAX_REVISIONS=2, MAX_TURNS=12)
+==============================================================
+[06:54:12] supervisor (turn 1): → researcher — Blackboard is empty.
+[06:54:12] researcher: 405 chars of notes gathered
+[06:54:12] supervisor (turn 2): → analyst — Notes are in, nothing analyzed.
+[06:54:12] analyst: analysis written
+[06:54:12] supervisor (turn 3): → writer — Analysis is in, no draft yet.
+[06:54:12] writer: first draft
+[06:54:12] supervisor (turn 4): → critic — A fresh draft needs review.
+[06:54:12] critic: REVISE
+[06:54:12] supervisor (turn 5): → writer — Critic asked for fixes.
+[06:54:12] writer: revision 1
+[06:54:12] supervisor (turn 6): → critic — A fresh draft needs review.
+[06:54:12] critic: APPROVED
+[06:54:12] supervisor (turn 7): → FINISH — Draft approved or budget spent.
+
+==============================================================
+FINAL DRAFT
+==============================================================
+HEADLINE: Supervised agent teams beat solo agents — when the task needs specialists.
+Findings: (1) an explicit supervisor outperforms unsupervised swarms (example.com/supervisor); (2) scoping tools per role roughly halved wrong-tool calls (example.com/scoping); (3) one critic pass caught most factual slips (example.com/critique).
+Recommendation: pilot a supervisor-pattern team on one workflow that genuinely has distinct roles, and measure calls and latency against today's single agent before going wider.
+
+==============================================================
+STATS: turns=7 revisions=1 verdict=APPROVED
+==============================================================
