@@ -1,0 +1,88 @@
+=== 1. HTTP service (03-fastapi-openresponses.md) ===
+$ curl -s localhost:8000/healthz
+{"status":"ok"}
+
+$ curl -s -X POST localhost:8000/v1/responses -d '{"input":"write a research brief on tethered drones"}'
+{
+    "id": "resp_8c4d657737a648ebba566731",
+    "object": "response",
+    "created_at": 1786517694,
+    "status": "completed",
+    "model": "nvidia/nemotron-3-super-120b-a12b:free",
+    "output": [
+        {
+            "type": "message",
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "output_text",
+                    "text": "[FAKE AGENT] received: 'write a research brief on tethered drones'\nWith a real key I would plan, call my tools, and consult my skills (commit-message, research-brief).\nProof the tools themselves are real: calculate('17*23') = 391, current_time() = 2026-08-12T06:54:54+00:00."
+                }
+            ]
+        }
+    ]
+}
+
+=== 2. Agent card (09-a2a.md) ===
+{
+    "protocolVersion": "1.0",
+    "name": "alyemenyab-agent",
+    "description": "Research and analysis agent. Turns a topic into a structured one-page brief with sourced findings and an explicit confidence line, and writes Conventional Commits messages from a described change. Exact arithmetic and current UTC time come from tools, not from the model's memory.",
+    "url": "http://localhost:8000/v1/responses",
+    "version": "0.1.0",
+    "capabilities": {
+        "streaming": false
+    },
+    "defaultInputModes": [
+        "text/plain"
+    ],
+    "defaultOutputModes": [
+        "text/plain"
+    ],
+    "skills": [
+        {
+            "id": "research-brief",
+            "name": "Research brief",
+            "description": "One-page executive brief on a technical topic: headline, context, exactly three findings, a recommendation, and a stated confidence level. Under 200 words.",
+            "tags": [
+                "research",
+                "writing",
+                "summary",
+                "brief"
+            ]
+        },
+        {
+            "id": "commit-message",
+            "name": "Commit message",
+            "description": "Conventional Commits message from a description of a change: typed, scoped, imperative subject under 50 characters, body only when the reason is not obvious.",
+            "tags": [
+                "git",
+                "writing",
+                "engineering"
+            ]
+        }
+    ]
+}
+
+=== 3. A2A discovery + delegation (09-a2a.md) ===
+==============================================================
+discovered: alyemenyab-agent (A2A 1.0, v0.1.0)
+  endpoint: http://localhost:8000/v1/responses
+  Research and analysis agent. Turns a topic into a structured one-page brief with sourced findings and an explicit confidence line, and writes Conventional Commits messages from a described change. Exact arithmetic and current UTC time come from tools, not from the model's memory.
+  skills (2):
+    - research-brief: One-page executive brief on a technical topic: headline, context, exactly three findings,   [research, writing, summary, brief]
+    - commit-message: Conventional Commits message from a description of a change: typed, scoped, imperative sub  [git, writing, engineering]
+==============================================================
+delegating: write a research brief on tethered drones
+
+[FAKE AGENT] received: 'write a research brief on tethered drones'
+With a real key I would plan, call my tools, and consult my skills (commit-message, research-brief).
+Proof the tools themselves are real: calculate('17*23') = 391, current_time() = 2026-08-12T06:54:54+00:00.
+==============================================================
+
+=== 4. MCP tools + skills as resources (06, 07) ===
+tools:       ['calculate', 'word_stats']
+calculate('2*(3+4)**2') -> 98.0
+word_stats  -> {'words': 5, 'sentences': 2, 'unique_words': 5, 'characters': 25, 'average_word_length': 3.8}
+resources:   ['skill://commit-message/SKILL.md', 'skill://commit-message/_manifest', 'skill://research-brief/SKILL.md', 'skill://research-brief/_manifest']
+downloaded skill folder -> /tmp/pulled/commit-message
