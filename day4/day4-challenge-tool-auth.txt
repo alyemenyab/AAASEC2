@@ -1,0 +1,14 @@
+=== challenge tool (get_lab_inventory) — credential-less, student, admin ===
+
+no token        -> HTTPStatusError: Client error '401 Unauthorized' for url 'http://localhost:8002/mcp'
+For more information c
+student sees    -> ['get_server_time']
+student call    -> ToolError: Unknown tool: 'get_lab_inventory'
+admin sees      -> ['get_server_time', 'get_internal_report', 'get_lab_inventory']
+admin call      -> AAASEC2 aerial robotics lab, 6 items, classification=confidential
+                   BAT-6S-5200    qty=14  cost=385.0    reorder=10
+                   MTR-2207-1750  qty=6   cost=142.5    reorder=12
+                   PRP-5045-CF    qty=48  cost=27.0     reorder=20
+                   FCU-H7-PRO     qty=3   cost=690.0    reorder=4
+                   LDR-TOF-40     qty=9   cost=455.0    reorder=6
+                   TET-CBL-30M    qty=2   cost=1240.0   reorder=3

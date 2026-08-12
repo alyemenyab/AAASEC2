@@ -1,0 +1,11 @@
+auth matrix against http://localhost:8002/mcp
+
+  ❌ no token, public tool              -> HTTPStatusError: Client error '401 Unauthorized' for url 'http://localhost:80
+  ❌ wrong token, public tool           -> HTTPStatusError: Client error '401 Unauthorized' for url 'http://localhost:80
+  ✅ student token, public tool         -> 2026-08-12T06:54:21+00:00
+  ❌ student token, PROTECTED tool      -> ToolError: Unknown tool: 'get_internal_report'
+  ✅ admin token, PROTECTED tool        -> {'quarter': 'Q2-2026', 'currency': 'SAR', 'month
+
+expected: rows 1-2 rejected at the door (401 = authentication),
+row 4 rejected as 'Unknown tool' (scopes = authorization — the
+tool is hidden from you, not just refused), rows 3 and 5 succeed.
